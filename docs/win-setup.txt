@@ -1,0 +1,9 @@
+1) Enable Hyper-V
+https://learn.microsoft.com/en-us/virtualization/hyper-v-on-windows/reference/hyper-v-requirements
+
+2) Install WSL-2 and Ubuntu 22
+https://learn.microsoft.com/en-us/windows/wsl/install-manual
+
+3) Install Docker Desktop
+https://docs.docker.com/desktop/install/windows-install/
+https://learn.microsoft.com/en-us/virtualization/windowscontainers/quick-start/quick-start-windows-10-linux

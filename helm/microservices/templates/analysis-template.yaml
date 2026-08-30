@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: pod-readiness
+spec:
+  args:
+    - name: service-name
+    - name: namespace
+  metrics:
+    - name: ready-pod-ratio
+      interval: {{ .Values.rollout.analysisInterval }}
+      count: {{ .Values.rollout.analysisCount }}
+      successCondition: result[0] >= 0.99
+      failureLimit: 1
+      provider:
+        prometheus:
+          address: {{ .Values.prometheus.address | quote }}
+          query: |
+            sum(kube_pod_status_ready{
+              namespace="{{`{{args.namespace}}`}}",
+              condition="true",
+              pod=~"{{`{{args.service-name}}`}}-.*"
+            })
+            /
+            clamp_min(count(kube_pod_status_ready{
+              namespace="{{`{{args.namespace}}`}}",
+              condition="true",
+              pod=~"{{`{{args.service-name}}`}}-.*"
+            }), 1)

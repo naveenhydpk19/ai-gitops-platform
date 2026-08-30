@@ -1,0 +1,17 @@
+replicaCount: 2
+image:
+  repository: REPLACE_WITH_ECR_REPOSITORY
+  tag: "1.0.0"
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
+cassandra:
+  storage: 20Gi
+rollout:
+  initialPause: 2m
+  promotionPause: 5m
+  analysisCount: 5

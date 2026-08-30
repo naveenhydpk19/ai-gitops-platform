@@ -1,0 +1,10 @@
+FROM eclipse-temurin:11-jre
+
+RUN useradd --create-home --uid 10001 appuser
+WORKDIR /opt/app
+COPY jar/*.jar /opt/app/jar/
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod 0555 /usr/local/bin/docker-entrypoint.sh && chown -R appuser:appuser /opt/app
+
+USER 10001
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

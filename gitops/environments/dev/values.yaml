@@ -1,0 +1,9 @@
+replicaCount: 1
+image:
+  repository: REPLACE_WITH_ECR_REPOSITORY
+  tag: "1.0.0"
+cassandra:
+  storage: 5Gi
+rollout:
+  initialPause: 15s
+  promotionPause: 30s

@@ -1,0 +1,78 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: discovery-svc
+  labels:
+    app: discovery-svc
+spec:
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+      nodePort: 32101
+  selector:
+    app: discovery-svc
+#  type: ClusterIP
+#  type: LoadBalancer
+  type: NodePort
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: discovery-svc-pods
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: discovery-svc
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+       maxUnavailable: 25%
+       maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: discovery-svc
+    spec:
+      containers:
+      - name: discovery-svc-cont
+        image: IMAGE_REGISTRY_PATH/micro-service:REVISION_ID
+        args: ["discovery"]
+        imagePullPolicy: IMAGE_PULL_POLICY
+        ports:
+          - containerPort: 8080
+        volumeMounts:
+          - name: log-data
+            mountPath: /var/log/oms
+        envFrom:
+          - configMapRef:
+              name: service-config
+        env:
+          - name: eureka.client.register-with-eureka
+            value: "false"
+          - name: eureka.client.fetch-registry
+            value: "false"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 180
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 2
+      volumes:
+        - name: log-data
+          emptyDir: {}
+      topologySpreadConstraints:                                                                                                                     
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: discovery-svc

@@ -1,0 +1,42 @@
+.history-panel {
+  margin-top: 18px;
+  padding: 20px;
+  border: 1px solid #d4dbd8;
+  background: #fff;
+}
+
+.history-panel > .panel-head { margin-bottom: 12px; }
+.history-state { margin: 0; padding: 18px 0; color: #718087; }
+.history-state.error { color: #8f3434; }
+
+.history-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 110px 90px 70px 120px 1fr;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 8px;
+  border: 0;
+  border-top: 1px solid #e3e8e6;
+  background: transparent;
+  color: #334249;
+  text-align: left;
+  cursor: pointer;
+}
+
+.history-row:hover { background: #f6f8f7; }
+.history-row time { text-align: right; color: #718087; font-size: 12px; }
+.risk-tag { width: max-content; padding: 4px 7px; border-radius: 4px; background: #edf0ee; font-size: 10px; font-weight: 900; }
+.risk-tag.high, .risk-tag.critical { background: #f5dddd; color: #8f3434; }
+.risk-tag.medium { background: #fff0d9; color: #8b591e; }
+.risk-tag.low { background: #dff2e9; color: #267154; }
+.status-ready { color: #267154; font-weight: 800; }
+.status-blocked { color: #8f3434; font-weight: 800; }
+.decision-strip.ready { border-top-color: #44b78b; }
+.decision-strip.ready .risk-score > span, .decision-strip.ready .decision { color: #267154; }
+
+@media (max-width: 760px) {
+  .history-row { grid-template-columns: 1fr auto auto; }
+  .history-row .status-ready, .history-row .status-blocked { grid-column: 1 / 2; }
+  .history-row time { grid-column: 2 / 4; }
+}

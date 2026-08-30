@@ -1,0 +1,8 @@
+{
+  "services": [
+    {"name": "checkout-api", "repository": "company/commerce-platform", "paths": ["services/checkout/", "infra/ingress"], "depends_on": ["payments-api", "orders-api"]},
+    {"name": "payments-api", "repository": "company/commerce-platform", "paths": ["services/payments/", "deploy/configmap"], "depends_on": ["ledger-writer"]},
+    {"name": "orders-api", "repository": "company/commerce-platform", "paths": ["services/orders/"], "depends_on": []},
+    {"name": "ledger-writer", "repository": "company/commerce-platform", "paths": ["services/ledger/", "db/migrations/"], "depends_on": []}
+  ]
+}

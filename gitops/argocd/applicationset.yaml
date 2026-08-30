@@ -1,0 +1,33 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: training-microservices
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - environment: dev
+          - environment: qa
+          - environment: prod
+  template:
+    metadata:
+      name: training-microservices-{{environment}}
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/naveenhydpk19/ai-gitops-platform.git
+        targetRevision: master
+        path: helm/microservices
+        helm:
+          valueFiles:
+            - ../../gitops/environments/{{environment}}/values.yaml
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{environment}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

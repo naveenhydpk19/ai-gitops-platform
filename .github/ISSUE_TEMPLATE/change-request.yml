@@ -1,0 +1,45 @@
+name: Production change request
+description: Request approval for a ChangeGuard production promotion
+title: "CR: "
+labels:
+  - change-request
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Release version
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Change scope
+      description: Services, infrastructure, and user-visible behavior affected
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation evidence
+      description: CI, dev, QA, security scan, and SLO evidence
+    validations:
+      required: true
+  - type: textarea
+    id: rollback
+    attributes:
+      label: Rollback plan
+      description: Exact rollback trigger and procedure
+    validations:
+      required: true
+  - type: checkboxes
+    id: readiness
+    attributes:
+      label: Readiness controls
+      options:
+        - label: Dev promotion is healthy
+          required: true
+        - label: QA promotion is healthy
+          required: true
+        - label: Rollback procedure has been reviewed
+          required: true

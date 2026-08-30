@@ -1,0 +1,160 @@
+name: ChangeGuard release and deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Semantic version without the v prefix
+        required: true
+        type: string
+      environments:
+        description: Comma-separated promotion order
+        required: true
+        type: string
+      change_request:
+        description: Approved GitHub issue number for production
+        required: false
+        type: string
+      plan_id:
+        description: ChangeGuard audit plan identifier
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  id-token: write
+  issues: read
+
+concurrency:
+  group: release-${{ inputs.version }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: training-microservices
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      deploy_dev: ${{ steps.targets.outputs.deploy_dev }}
+      deploy_qa: ${{ steps.targets.outputs.deploy_qa }}
+      deploy_prod: ${{ steps.targets.outputs.deploy_prod }}
+    steps:
+      - name: Validate immutable release inputs
+        shell: bash
+        run: |
+          [[ "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "${{ github.ref_name }}" == "master" || "${{ github.ref_name }}" == "main" ]]
+      - name: Resolve requested targets
+        id: targets
+        shell: bash
+        run: |
+          targets=",${{ inputs.environments }},"
+          [[ "$targets" == *",dev,"* ]] && echo "deploy_dev=true" >> "$GITHUB_OUTPUT" || echo "deploy_dev=false" >> "$GITHUB_OUTPUT"
+          [[ "$targets" == *",qa,"* ]] && echo "deploy_qa=true" >> "$GITHUB_OUTPUT" || echo "deploy_qa=false" >> "$GITHUB_OUTPUT"
+          [[ "$targets" == *",prod,"* ]] && echo "deploy_prod=true" >> "$GITHUB_OUTPUT" || echo "deploy_prod=false" >> "$GITHUB_OUTPUT"
+      - name: Revalidate production change request
+        if: contains(format(',{0},', inputs.environments), ',prod,')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          test -n "${{ inputs.change_request }}"
+          state=$(gh api "repos/${{ github.repository }}/issues/${{ inputs.change_request }}" --jq .state)
+          approved=$(gh api "repos/${{ github.repository }}/issues/${{ inputs.change_request }}" --jq '[.labels[].name | ascii_downcase] | any(. == "change-approved")')
+          test "$state" = "open"
+          test "$approved" = "true"
+
+  release:
+    needs: [validate, publish]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create immutable tag
+        shell: bash
+        run: |
+          git config user.name "changeguard-release-bot"
+          git config user.email "changeguard-release-bot@users.noreply.github.com"
+          git rev-parse "v${{ inputs.version }}" >/dev/null 2>&1 && exit 1 || true
+          git tag -a "v${{ inputs.version }}" -m "ChangeGuard plan ${{ inputs.plan_id }}"
+          git push origin "v${{ inputs.version }}"
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "v${{ inputs.version }}" --generate-notes --verify-tag
+
+  publish:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_RELEASE_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Download immutable training artifacts
+        shell: bash
+        run: |
+          mkdir -p docker/services/micro-service/jar
+          for service in auth discovery gateway inventory order product; do
+            curl --fail --retry 3 "https://ntw-shared-data.s3.ap-south-1.amazonaws.com/samples/micro-services/${service}.jar" \
+              --output "docker/services/micro-service/jar/${service}.jar"
+          done
+      - name: Build and publish release image
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+        shell: bash
+        run: |
+          image="$REGISTRY/$ECR_REPOSITORY:${{ inputs.version }}"
+          docker build -f docker/services/micro-service/Dockerfile.release -t "$image" docker/services/micro-service
+          echo "IMAGE=$image" >> "$GITHUB_ENV"
+      - name: Block critical and high image vulnerabilities
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.IMAGE }}
+          format: table
+          exit-code: "1"
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+      - name: Push scanned image
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+        shell: bash
+        run: |
+          image="$REGISTRY/$ECR_REPOSITORY:${{ inputs.version }}"
+          docker push "$image"
+          docker tag "$image" "$REGISTRY/$ECR_REPOSITORY:${{ github.sha }}"
+          docker push "$REGISTRY/$ECR_REPOSITORY:${{ github.sha }}"
+
+  deploy-dev:
+    if: needs.validate.outputs.deploy_dev == 'true'
+    needs: [validate, publish, release]
+    uses: ./.github/workflows/update-gitops.yml
+    with:
+      environment: dev
+      version: ${{ inputs.version }}
+    secrets: inherit
+
+  deploy-qa:
+    if: always() && needs.validate.outputs.deploy_qa == 'true' && needs.publish.result == 'success' && (needs.deploy-dev.result == 'success' || needs.deploy-dev.result == 'skipped')
+    needs: [validate, publish, release, deploy-dev]
+    uses: ./.github/workflows/update-gitops.yml
+    with:
+      environment: qa
+      version: ${{ inputs.version }}
+    secrets: inherit
+
+  deploy-prod:
+    if: always() && needs.validate.outputs.deploy_prod == 'true' && needs.publish.result == 'success' && (needs.deploy-qa.result == 'success' || needs.deploy-qa.result == 'skipped')
+    needs: [validate, publish, release, deploy-qa]
+    uses: ./.github/workflows/update-gitops.yml
+    with:
+      environment: production
+      values_environment: prod
+      version: ${{ inputs.version }}
+    secrets: inherit

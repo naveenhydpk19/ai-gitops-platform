@@ -1,0 +1,59 @@
+image:
+  repository: REPLACE_WITH_ECR_REPOSITORY
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+javaHeap: -Xmx512M
+
+rollout:
+  canaryReplicas: 1
+  initialWeight: 20
+  promotionWeight: 50
+  initialPause: 30s
+  promotionPause: 60s
+  analysisInterval: 20s
+  analysisCount: 3
+
+prometheus:
+  address: http://kube-prometheus-stack-prometheus.monitoring:9090
+
+services:
+  - name: discovery-svc
+    artifact: discovery
+    port: 8761
+  - name: gateway-svc
+    artifact: gateway
+    port: 8080
+    public: true
+  - name: auth-svc
+    artifact: auth
+    port: 8070
+  - name: product-svc
+    artifact: product
+    port: 8073
+  - name: order-svc
+    artifact: order
+    port: 8077
+  - name: inventory-svc
+    artifact: inventory
+    port: 8060
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 384Mi
+  limits:
+    cpu: 500m
+    memory: 768Mi
+
+cassandra:
+  image: cassandra:4.1
+  storage: 5Gi
+
+config:
+  database.cassandra.hosts: cassandra
+  database.cassandra.port: "9042"
+  database.cassandra.keySpace: oms
+  eureka.client.serviceUrl.defaultZone: http://discovery-svc:8761/eureka
+  spring.config.name: application-kube

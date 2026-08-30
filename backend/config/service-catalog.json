@@ -1,0 +1,11 @@
+{
+  "services": [
+    {"name": "gateway-svc", "repository": "naveenhydpk19/ai-gitops-platform", "paths": ["jars/gateway.jar", "kubernetes/config/gateway-svc.yaml"], "depends_on": ["auth-svc", "product-svc", "order-svc", "inventory-svc", "discovery-svc"]},
+    {"name": "auth-svc", "repository": "naveenhydpk19/ai-gitops-platform", "paths": ["jars/auth.jar", "kubernetes/config/auth-svc.yaml"], "depends_on": ["discovery-svc", "cassandra"]},
+    {"name": "product-svc", "repository": "naveenhydpk19/ai-gitops-platform", "paths": ["jars/product.jar", "kubernetes/config/product-svc.yaml"], "depends_on": ["discovery-svc", "cassandra"]},
+    {"name": "order-svc", "repository": "naveenhydpk19/ai-gitops-platform", "paths": ["jars/order.jar", "kubernetes/config/order-svc.yaml"], "depends_on": ["discovery-svc", "cassandra"]},
+    {"name": "inventory-svc", "repository": "naveenhydpk19/ai-gitops-platform", "paths": ["jars/inventory.jar", "kubernetes/config/inventory-svc.yaml"], "depends_on": ["discovery-svc", "cassandra"]},
+    {"name": "discovery-svc", "repository": "naveenhydpk19/ai-gitops-platform", "paths": ["jars/discovery.jar", "kubernetes/config/discovery-svc.yaml"], "depends_on": []},
+    {"name": "cassandra", "repository": "naveenhydpk19/ai-gitops-platform", "paths": ["kubernetes/config/cassandra.yaml"], "depends_on": []}
+  ]
+}

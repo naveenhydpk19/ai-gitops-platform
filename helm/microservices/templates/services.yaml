@@ -1,0 +1,15 @@
+{{- range .Values.services }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .name }}
+spec:
+  type: {{ if .public }}LoadBalancer{{ else }}ClusterIP{{ end }}
+  selector:
+    app.kubernetes.io/name: {{ .name }}
+  ports:
+    - name: http
+      port: {{ if .public }}80{{ else }}{{ .port }}{{ end }}
+      targetPort: http
+{{- end }}
