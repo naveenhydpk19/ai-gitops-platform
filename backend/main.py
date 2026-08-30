@@ -143,6 +143,8 @@ def dependency_impact(payload: dict):
 def rollout_signals(service: str, namespace: str = "default", rollout: str = ""):
     try:
         return EnvironmentClient().rollout_signals(service, namespace, rollout or service)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
     except httpx.HTTPError as error:
         raise HTTPException(status_code=502, detail="Environment signal source is unavailable") from error
 

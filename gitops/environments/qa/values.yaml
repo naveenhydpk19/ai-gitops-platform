@@ -1,6 +1,6 @@
 replicaCount: 1
 image:
-  repository: REPLACE_WITH_ECR_REPOSITORY
+  repository: 038462776615.dkr.ecr.us-east-1.amazonaws.com/training-microservices
   tag: "1.0.0"
 cassandra:
   storage: 10Gi

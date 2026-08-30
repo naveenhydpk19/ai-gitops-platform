@@ -27,8 +27,8 @@ type Graph = {
 type IntegrationStatus = Record<string, { configured: boolean; supportsPublicWithoutToken?: boolean }>
 type Signals = {
   service: string
-  prometheus: { configured: boolean; metrics?: { errorRate: number | null; requestRate: number | null } }
-  rollout: { configured: boolean; phase?: string; replicas?: number; updatedReplicas?: number; availableReplicas?: number; currentStepIndex?: number }
+  prometheus: { configured: boolean; available: boolean; error?: string; metrics?: { errorRate: number | null; requestRate: number | null } }
+  rollout: { configured: boolean; available: boolean; error?: string; phase?: string; replicas?: number; updatedReplicas?: number; availableReplicas?: number; currentStepIndex?: number }
 }
 type DeliveryPlan = {
   planId: string; status: string; repository: string; version: string; changeRequest?: number
@@ -83,9 +83,9 @@ function App() {
   const [changeRequest, setChangeRequest] = useState('')
   const [repository, setRepository] = useState('')
   const [pullRequest, setPullRequest] = useState('')
-  const [service, setService] = useState('checkout-api')
-  const [namespace, setNamespace] = useState('production')
-  const [rollout, setRollout] = useState('checkout-api')
+  const [service, setService] = useState('gateway-svc')
+  const [namespace, setNamespace] = useState('dev')
+  const [rollout, setRollout] = useState('gateway-svc')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -238,7 +238,7 @@ function App() {
         <div className="connector-grid"><article><span className={integrations?.prometheus?.configured ? 'online' : ''}/><div><strong>Prometheus</strong><small>{integrations?.prometheus?.configured ? 'Endpoint configured' : 'PROMETHEUS_URL not configured'}</small></div></article><article><span className={integrations?.argoRollouts?.configured ? 'online' : ''}/><div><strong>Argo Rollouts</strong><small>{integrations?.argoRollouts?.configured ? 'Kubernetes API configured' : 'Kubernetes credentials not configured'}</small></div></article></div>
         <form className="command-bar signal-form" onSubmit={loadSignals}><label><span>Service label</span><input value={service} onChange={event => setService(event.target.value)} required/></label><label><span>Namespace</span><input value={namespace} onChange={event => setNamespace(event.target.value)} required/></label><label><span>Rollout resource</span><input value={rollout} onChange={event => setRollout(event.target.value)} required/></label><button className="analyze" disabled={busy}><Activity size={17}/>{busy ? 'Querying...' : 'Query live signals'}</button></form>
         {!signals && <section className="empty-workspace"><Activity size={34}/><h2>No environment query has run</h2><p>Configure the connectors, then query a service and Argo Rollout resource. ChangeGuard does not synthesize metrics when a source is absent.</p></section>}
-        {signals && <div className="signal-results"><article><p className="eyebrow">5xx error rate</p><strong>{signals.prometheus.metrics?.errorRate != null ? `${signals.prometheus.metrics.errorRate.toFixed(2)}%` : 'Unavailable'}</strong><small>{signals.prometheus.configured ? 'Prometheus query result' : 'Connector not configured'}</small></article><article><p className="eyebrow">Request rate</p><strong>{signals.prometheus.metrics?.requestRate != null ? `${signals.prometheus.metrics.requestRate.toFixed(1)}/s` : 'Unavailable'}</strong><small>{signals.prometheus.configured ? 'Prometheus query result' : 'Connector not configured'}</small></article><article><p className="eyebrow">Rollout phase</p><strong>{signals.rollout.phase ?? 'Unavailable'}</strong><small>{signals.rollout.configured ? `${signals.rollout.updatedReplicas ?? 0}/${signals.rollout.replicas ?? 0} replicas updated` : 'Connector not configured'}</small></article></div>}
+        {signals && <div className="signal-results"><article><p className="eyebrow">5xx error rate</p><strong>{signals.prometheus.metrics?.errorRate != null ? `${signals.prometheus.metrics.errorRate.toFixed(2)}%` : 'No data'}</strong><small>{signals.prometheus.metrics?.errorRate != null ? 'Live Prometheus query' : signals.prometheus.available ? 'No matching Prometheus series' : signals.prometheus.error ?? 'Connector not configured'}</small></article><article><p className="eyebrow">Request rate</p><strong>{signals.prometheus.metrics?.requestRate != null ? `${signals.prometheus.metrics.requestRate.toFixed(1)}/s` : 'No data'}</strong><small>{signals.prometheus.metrics?.requestRate != null ? 'Live Prometheus query' : signals.prometheus.available ? 'No matching Prometheus series' : signals.prometheus.error ?? 'Connector not configured'}</small></article><article><p className="eyebrow">Rollout phase</p><strong>{signals.rollout.phase ?? 'Not deployed'}</strong><small>{signals.rollout.available ? `${signals.rollout.updatedReplicas ?? 0}/${signals.rollout.replicas ?? 0} replicas updated` : signals.rollout.error ?? 'Connector not configured'}</small></article></div>}
       </>}
 
       {view === 'release' && <>
