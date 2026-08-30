@@ -60,6 +60,14 @@ async function api<T>(url: string, options?: RequestInit): Promise<T> {
   return data as T
 }
 
+function verificationStatus(source: Source | null) {
+  const checks = source?.check_runs ?? []
+  if (checks.length === 0) return { label: 'No checks reported', passing: false }
+  if (source?.tests_passed) return { label: 'Passing', passing: true }
+  if (checks.some(check => check.status !== 'completed')) return { label: 'Pending', passing: false }
+  return { label: 'Failing', passing: false }
+}
+
 function App() {
   const [view, setView] = useState<View>('review')
   const [analysis, setAnalysis] = useState<Analysis | null>(null)
@@ -170,6 +178,7 @@ function App() {
   }
 
   const blocked = analysis?.decision === 'BLOCKED_PENDING_CONTROLS'
+  const verification = verificationStatus(source)
 
   return <div className="shell">
     <aside>
@@ -207,7 +216,7 @@ function App() {
           <div className="grid">
             <section className="panel"><div className="panel-head"><div><p className="eyebrow">GitHub change set</p><h2>{source?.title ?? analysis.changeId}</h2></div>{source?.url && <a className="icon-link" href={source.url} target="_blank" rel="noreferrer" title="Open pull request"><ExternalLink size={17}/></a>}</div><p className="summary">Author: {source?.author ?? 'unknown'} · Commit: {source?.head_sha?.slice(0, 8) ?? 'not recorded'}</p>{source?.files?.length ? source.files.map(file => <div className="file" key={file}><code>{file}</code></div>) : <p className="muted">File evidence was not recorded for this analysis.</p>}</section>
             <section className="panel"><div className="panel-head"><div><p className="eyebrow">Explainable score</p><h2>Risk factors</h2></div><strong>{analysis.score} pts</strong></div>{analysis.factors.length ? analysis.factors.map(factor => <div className="factor" key={factor.label}><span>+{factor.points}</span><div><strong>{factor.label}</strong><small>{factor.evidence}</small></div></div>) : <p className="muted">No elevated risk patterns detected.</p>}</section>
-            <section className="panel"><div className="panel-head"><div><p className="eyebrow">GitHub checks</p><h2>Verification evidence</h2></div><span className={`pill ${source?.tests_passed ? '' : 'danger'}`}>{source?.tests_passed ? 'Passing' : 'Not passing'}</span></div>{source?.check_runs?.length ? source.check_runs.map(check => <div className="check-row" key={check.name}><strong>{check.name}</strong><span>{check.status}</span><small>{check.conclusion ?? 'pending'}</small></div>) : <p className="muted">No check-run evidence was returned by GitHub.</p>}</section>
+            <section className="panel"><div className="panel-head"><div><p className="eyebrow">GitHub checks</p><h2>Verification evidence</h2></div><span className={`pill ${verification.passing ? '' : 'danger'}`}>{verification.label}</span></div>{source?.check_runs?.length ? source.check_runs.map(check => <div className="check-row" key={check.name}><strong>{check.name}</strong><span>{check.status}</span><small>{check.conclusion ?? 'pending'}</small></div>) : <p className="muted">GitHub returned no check runs for this commit. Policy treats missing evidence as not passing.</p>}</section>
             <section className="panel"><div className="panel-head"><div><p className="eyebrow">Deterministic policy</p><h2>Required controls</h2></div><span className="pill danger">{analysis.requiredControls.length} controls</span></div>{analysis.requiredControls.map((control, index) => <div className="control" key={control}><span>{index + 1}</span><strong>{control}</strong><small>Required</small></div>)}</section>
           </div>
         </>}

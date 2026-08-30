@@ -7,7 +7,8 @@ from pathlib import Path
 
 class ServiceCatalog:
     def __init__(self, path: str | Path | None = None):
-        self.path = Path(path or os.getenv("SERVICE_CATALOG_PATH", "config/service-catalog.json"))
+        configured_path = path or os.getenv("SERVICE_CATALOG_PATH")
+        self.path = Path(configured_path) if configured_path else Path(__file__).resolve().parent / "config/service-catalog.json"
 
     def graph(self) -> dict:
         if not self.path.exists():

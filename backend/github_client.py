@@ -19,26 +19,31 @@ class GitHubClient:
             headers["Authorization"] = f"Bearer {self.token}"
         return headers
 
+    def _get_paginated(self, path: str, headers: dict[str, str], key: str | None = None) -> list[dict]:
+        items: list[dict] = []
+        url: str | None = path
+        params: dict[str, int] | None = {"per_page": 100}
+        while url:
+            response = self.client.get(url, headers=headers, params=params)
+            response.raise_for_status()
+            payload = response.json()
+            items.extend(payload.get(key, []) if key else payload)
+            url = response.links.get("next", {}).get("url")
+            params = None
+        return items
+
     def pull_request_change(self, repository: str, number: int) -> dict:
         headers = self._headers()
         pull_request = self.client.get(f"/repos/{repository}/pulls/{number}", headers=headers)
         pull_request.raise_for_status()
         pull_request_data = pull_request.json()
 
-        files = self.client.get(
-            f"/repos/{repository}/pulls/{number}/files",
-            headers=headers,
-            params={"per_page": 100},
-        )
-        files.raise_for_status()
-
-        check_runs = self.client.get(
+        files = self._get_paginated(f"/repos/{repository}/pulls/{number}/files", headers)
+        checks = self._get_paginated(
             f"/repos/{repository}/commits/{pull_request_data['head']['sha']}/check-runs",
-            headers=headers,
-            params={"per_page": 100},
+            headers,
+            key="check_runs",
         )
-        check_runs.raise_for_status()
-        checks = check_runs.json().get("check_runs", [])
         passing_conclusions = {"success", "neutral", "skipped"}
         tests_passed = bool(checks) and all(
             check.get("status") == "completed" and check.get("conclusion") in passing_conclusions
@@ -56,7 +61,7 @@ class GitHubClient:
             "title": pull_request_data.get("title", "Untitled pull request"),
             "url": pull_request_data.get("html_url"),
             "head_sha": pull_request_data["head"]["sha"],
-            "files": [file["filename"] for file in files.json()],
+            "files": [file["filename"] for file in files],
             "additions": pull_request_data.get("additions", 0),
             "deletions": pull_request_data.get("deletions", 0),
             "tests_passed": tests_passed,

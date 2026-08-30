@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 import os
+from pathlib import Path
 
 import httpx
 from fastapi import FastAPI, Header, HTTPException, Query, Request
@@ -32,8 +33,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-store = ChangeStore(os.getenv("CHANGEGUARD_DATABASE", "data/changeguard.db"))
-delivery_store = DeliveryStore(os.getenv("CHANGEGUARD_DATABASE", "data/changeguard.db"))
+database_path = os.getenv("CHANGEGUARD_DATABASE") or str(Path(__file__).resolve().parent / "data/changeguard.db")
+store = ChangeStore(database_path)
+delivery_store = DeliveryStore(database_path)
 catalog = ServiceCatalog()
 
 
