@@ -41,9 +41,23 @@ type DeliveryPlan = {
 
 async function api<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, options)
-  const data = await response.json()
-  if (!response.ok) throw new Error(data.detail || 'Request failed')
-  return data
+  const body = await response.text()
+  let data: unknown
+
+  try {
+    data = body ? JSON.parse(body) : null
+  } catch {
+    throw new Error(`ChangeGuard API returned an invalid response (${response.status})`)
+  }
+
+  if (!response.ok) {
+    const detail = data && typeof data === 'object' && 'detail' in data
+      ? String(data.detail)
+      : `Request failed (${response.status})`
+    throw new Error(detail)
+  }
+  if (data === null) throw new Error(`ChangeGuard API returned an empty response (${response.status})`)
+  return data as T
 }
 
 function App() {
