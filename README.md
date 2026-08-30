@@ -18,7 +18,7 @@ Missing connectors are reported as **not configured**. ChangeGuard does not subs
 
 ```powershell
 Copy-Item .env.example .env
-docker compose up --build
+docker compose up --build 
 ```
 
 Open `http://localhost:5173`. API documentation is at `http://localhost:8000/docs`.
