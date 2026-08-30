@@ -12,6 +12,16 @@ from service_catalog import ServiceCatalog
 
 
 class IntegrationTests(unittest.TestCase):
+    def test_catalog_exposes_logical_source_without_local_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "service-catalog.json"
+            path.write_text('{"services": []}', encoding="utf-8")
+
+            graph = ServiceCatalog(path, source="catalog/service-catalog.json").graph()
+
+            self.assertEqual("catalog/service-catalog.json", graph["source"])
+            self.assertNotIn(directory, graph["source"])
+
     def test_catalog_computes_transitive_dependants(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "catalog.json"

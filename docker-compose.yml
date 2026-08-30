@@ -4,6 +4,7 @@ services:
     environment:
       CHANGEGUARD_DATABASE: /app/data/changeguard.db
       SERVICE_CATALOG_PATH: /app/config/service-catalog.json
+      SERVICE_CATALOG_SOURCE: ${SERVICE_CATALOG_SOURCE:-backend/config/service-catalog.json}
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
       GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
